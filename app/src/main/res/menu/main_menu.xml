@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The only action of this screen: leave it once the list is set up. Adding and
+  removing sites saves immediately, so there is nothing to confirm.
+-->
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_done"
+        android:title="@string/done"
+        app:showAsAction="always" />
+</menu>

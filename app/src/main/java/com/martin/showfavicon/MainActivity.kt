@@ -2,6 +2,8 @@ package com.martin.showfavicon
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -10,6 +12,7 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -35,6 +38,12 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         applyWindowInsets(findViewById(R.id.root))
 
+        // The toolbar is the support action bar, which is what makes the menu
+        // below appear. The title is set here because the activity carries no
+        // label of its own.
+        setSupportActionBar(findViewById<Toolbar>(R.id.toolbar))
+        supportActionBar?.title = getString(R.string.sites_title)
+
         sites = SiteStore(this)
         urlInput = findViewById(R.id.url_input)
         emptyHint = findViewById(R.id.empty_view)
@@ -47,8 +56,11 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.add_button).setOnClickListener { addCurrentInput() }
         findViewById<Button>(R.id.refresh_button).setOnClickListener { fetchNow() }
+        // The keyboard's own Done key commits the field and then gets out of the
+        // way; without this the keyboard stayed up with nothing to close it.
         urlInput.setOnEditorActionListener { _, _, _ ->
             addCurrentInput()
+            hideKeyboard(urlInput)
             true
         }
         // A focusable EditText swallows its OnClickListener in the focus change,
@@ -109,6 +121,35 @@ class MainActivity : AppCompatActivity() {
         view.requestFocus()
         val manager = getSystemService(InputMethodManager::class.java) ?: return
         manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+    }
+
+    /** Takes the keyboard down again. */
+    private fun hideKeyboard(view: View) {
+        val manager = getSystemService(InputMethodManager::class.java) ?: return
+        manager.hideSoftInputFromWindow(view.windowToken, 0)
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.main_menu, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
+        R.id.action_done -> {
+            finishConfiguration()
+            true
+        }
+
+        else -> super.onOptionsItemSelected(item)
+    }
+
+    /**
+     * Leaves the screen and takes the keyboard down with it. Every change to the
+     * list is saved as it happens, so there is nothing to confirm here.
+     */
+    private fun finishConfiguration() {
+        hideKeyboard(urlInput)
+        finish()
     }
 
     private fun addCurrentInput() {

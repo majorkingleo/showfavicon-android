@@ -52,7 +52,7 @@ written down in
 
 | Piece | Responsibility |
 | --- | --- |
-| `MainActivity` | Settings screen: the list of sites, add and remove |
+| `MainActivity` | Settings screen: the list of sites, add and remove, and **Done** in the toolbar to close it |
 | `SiteStore` | The site list, in `SharedPreferences` as one newline separated value |
 | `FaviconWorker` | Hourly `WorkManager` job: fetch, cache, redraw the widget |
 | `FaviconFetcher` | Two small `HttpURLConnection` GETs: the page, then the icon |

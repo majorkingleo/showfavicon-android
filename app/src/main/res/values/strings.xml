@@ -8,6 +8,7 @@
     <string name="add_site">Add</string>
     <string name="fetch_now">Refresh now</string>
     <string name="remove_site">Remove</string>
+    <string name="done">Done</string>
     <string name="empty_list">No sites yet. Add one and it shows up in the widget.</string>
     <string name="error_empty_url">Enter a URL first</string>
     <string name="error_invalid_url">That does not look like a URL</string>
