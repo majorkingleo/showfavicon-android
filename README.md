@@ -34,6 +34,10 @@ Known gaps against the plan:
 - No launcher icon artwork yet, only a placeholder ring.
 - No signed release build (AAB) yet.
 
+A tray version for Windows 11 is planned separately in
+[`doc/plan-windows-11.md`](doc/plan-windows-11.md); it was written before this port
+and now carries a section with everything that transferred.
+
 ## Requirements
 
 - JDK 21 (AGP 9.4 rejects newer JDKs in this setup); the build is started with an
