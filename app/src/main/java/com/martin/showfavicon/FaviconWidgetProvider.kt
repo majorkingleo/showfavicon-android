@@ -7,7 +7,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
-import android.net.Uri
+import androidx.core.net.toUri
 import android.view.View
 import android.widget.RemoteViews
 
@@ -63,6 +63,8 @@ class FaviconWidgetProvider : AppWidgetProvider() {
 
                 views.setViewVisibility(slotId, View.VISIBLE)
                 views.setIcon(slotId, iconFor(store, site))
+                // Screen readers and the widget host read this, so it names the site.
+                views.setContentDescription(slotId, site)
                 views.setOnClickPendingIntent(slotId, openSite(context, index, site))
             }
 
@@ -78,7 +80,7 @@ class FaviconWidgetProvider : AppWidgetProvider() {
         }
 
         private fun openSite(context: Context, index: Int, site: String): PendingIntent {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(site))
+            val intent = Intent(Intent.ACTION_VIEW, site.toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             // One request code per slot; the payload is refreshed on every draw.
             return PendingIntent.getActivity(

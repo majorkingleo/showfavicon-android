@@ -15,19 +15,23 @@
 
     <ImageView
         android:id="@+id/slot_0"
-        style="@style/WidgetIconSlot" />
+        style="@style/WidgetIconSlot"
+        android:contentDescription="@string/widget_slot_description" />
 
     <ImageView
         android:id="@+id/slot_1"
-        style="@style/WidgetIconSlot" />
+        style="@style/WidgetIconSlot"
+        android:contentDescription="@string/widget_slot_description" />
 
     <ImageView
         android:id="@+id/slot_2"
-        style="@style/WidgetIconSlot" />
+        style="@style/WidgetIconSlot"
+        android:contentDescription="@string/widget_slot_description" />
 
     <ImageView
         android:id="@+id/slot_3"
-        style="@style/WidgetIconSlot" />
+        style="@style/WidgetIconSlot"
+        android:contentDescription="@string/widget_slot_description" />
 
     <TextView
         android:id="@+id/empty_hint"

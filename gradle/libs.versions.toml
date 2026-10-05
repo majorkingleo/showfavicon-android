@@ -1,7 +1,8 @@
 # Versions verified against Google Maven and Maven Central on 2026-10-05.
+# No Kotlin entry: AGP 9 has built-in Kotlin support and brings its own Kotlin
+# Gradle plugin, so no kotlin-android plugin is declared anywhere.
 [versions]
 agp = "9.4.1"
-kotlin = "2.4.20"
 coreKtx = "1.19.1"
 appcompat = "1.8.0"
 material = "1.14.0"
@@ -19,4 +20,3 @@ kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
-kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

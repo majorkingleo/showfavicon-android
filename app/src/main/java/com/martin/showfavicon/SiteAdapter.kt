@@ -5,23 +5,18 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 
 /**
  * The configured sites, one row per site with a remove button.
  *
- * The whole list is replaced on every change: it holds a handful of entries, so
- * DiffUtil would be more code than it saves.
+ * A `ListAdapter`, so an edit animates and rebinds only the rows that actually
+ * changed instead of invalidating the whole list.
  */
 class SiteAdapter(private val onRemove: (String) -> Unit) :
-    RecyclerView.Adapter<SiteAdapter.SiteViewHolder>() {
-
-    private var items: List<String> = emptyList()
-
-    fun submit(sites: List<String>) {
-        items = sites
-        notifyDataSetChanged()
-    }
+    ListAdapter<String, SiteAdapter.SiteViewHolder>(SITES_DIFFER) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): SiteViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.row_site, parent, false)
@@ -29,9 +24,7 @@ class SiteAdapter(private val onRemove: (String) -> Unit) :
     }
 
     override fun onBindViewHolder(holder: SiteViewHolder, position: Int) =
-        holder.bind(items[position])
-
-    override fun getItemCount(): Int = items.size
+        holder.bind(getItem(position))
 
     class SiteViewHolder(view: View, private val onRemove: (String) -> Unit) :
         RecyclerView.ViewHolder(view) {
@@ -45,4 +38,13 @@ class SiteAdapter(private val onRemove: (String) -> Unit) :
             removeButton.setOnClickListener { onRemove(site) }
         }
     }
+}
+
+/**
+ * Site URLs are unique inside the list, so the URL itself is the identity and
+ * the content: either both rows are the same or one of them is a different site.
+ */
+private val SITES_DIFFER = object : DiffUtil.ItemCallback<String>() {
+    override fun areItemsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
+    override fun areContentsTheSame(oldItem: String, newItem: String): Boolean = oldItem == newItem
 }

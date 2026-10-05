@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome layer for themed icons (Android 13+). The launcher uses only the
+  alpha channel, so the two circles are combined with evenOdd to keep the ring
+  hollow instead of filling it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M54,26 A28,28 0 1,1 53.9,26 Z M54,40 A14,14 0 1,1 53.9,40 Z" />
+</vector>

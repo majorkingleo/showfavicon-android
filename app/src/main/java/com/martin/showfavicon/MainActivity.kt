@@ -86,7 +86,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSites() {
         val list = sites.sites()
-        adapter.submit(list)
+        adapter.submitList(list)
         emptyHint.visibility = if (list.isEmpty()) View.VISIBLE else View.GONE
     }
 }

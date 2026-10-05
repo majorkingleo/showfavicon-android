@@ -18,19 +18,24 @@ set -euo pipefail
 REPO_PACKAGES=(jdk21-openjdk android-tools android-udev curl unzip)
 JDK_DIR_NAME=java-21-openjdk
 
-PLATFORM=36
+# API level the app compiles against. Android ships minor releases and the SDK
+# package id carries the minor part: platforms;android-37.2, not ...;android-37.
+PLATFORM=37
+PLATFORM_MINOR=2
 BUILD_TOOLS=36.0.0
 
 SDK_PACKAGES=(
   "platform-tools"
-  "platforms;android-${PLATFORM}"
+  "platforms;android-${PLATFORM}.${PLATFORM_MINOR}"
   "build-tools;${BUILD_TOOLS}"
   "cmdline-tools;latest"
 )
 
+# The API level of the emulator image is independent of compileSdk, and 37.2
+# ships no plain google_apis image (only the ps16k variants), so 36 is used.
 EMULATOR_PACKAGES=(
   "emulator"
-  "system-images;android-${PLATFORM};google_apis;x86_64"
+  "system-images;android-36;google_apis;x86_64"
 )
 
 REPO_XML="https://dl.google.com/android/repository/repository2-3.xml"
@@ -261,7 +266,7 @@ install_sdk_packages() {
   fi
 
   step "SDK packages"
-  info "android-${PLATFORM}, build-tools ${BUILD_TOOLS}, platform-tools, cmdline-tools"
+  info "android-${PLATFORM}.${PLATFORM_MINOR}, build-tools ${BUILD_TOOLS}, platform-tools, cmdline-tools"
   run "$SDKMANAGER" --sdk_root="$SDK_DIR" --install "${SDK_PACKAGES[@]}"
 }
 

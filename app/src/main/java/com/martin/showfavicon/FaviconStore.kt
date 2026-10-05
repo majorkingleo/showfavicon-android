@@ -8,6 +8,8 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
+import androidx.core.content.edit
+import androidx.core.graphics.createBitmap
 import java.io.File
 import java.io.IOException
 
@@ -73,7 +75,7 @@ class FaviconStore(context: Context) {
         val current = failedHosts()
         val kept = current.filter { it in keep }.toSet()
         if (kept.size != current.size) {
-            failedState.edit().putStringSet(KEY_FAILED, kept).apply()
+            failedState.edit { putStringSet(KEY_FAILED, kept) }
         }
     }
 
@@ -84,7 +86,7 @@ class FaviconStore(context: Context) {
         // The set handed out by SharedPreferences must not be modified in place.
         val hosts = failedHosts().toMutableSet()
         if (failed) hosts.add(host) else hosts.remove(host)
-        failedState.edit().putStringSet(KEY_FAILED, hosts).apply()
+        failedState.edit { putStringSet(KEY_FAILED, hosts) }
     }
 
     private fun fileFor(host: String): File = File(directory, sanitize(host) + PNG_SUFFIX)
@@ -120,7 +122,7 @@ class FaviconStore(context: Context) {
             val factor = maxSize.toFloat() / longest
             val width = maxOf(1, (source.width * factor).toInt())
             val height = maxOf(1, (source.height * factor).toInt())
-            val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val out = createBitmap(width, height)
             val paint = Paint().apply { isFilterBitmap = true }
             Canvas(out).drawBitmap(source, null, Rect(0, 0, width, height), paint)
             return out
@@ -132,7 +134,7 @@ class FaviconStore(context: Context) {
             // setScale on the alpha row dims the icon without a second canvas pass.
             matrix.postConcat(ColorMatrix().apply { setScale(1f, 1f, 1f, FAILED_ALPHA) })
 
-            val out = Bitmap.createBitmap(source.width, source.height, Bitmap.Config.ARGB_8888)
+            val out = createBitmap(source.width, source.height)
             val paint = Paint().apply {
                 colorFilter = ColorMatrixColorFilter(matrix)
                 isAntiAlias = true

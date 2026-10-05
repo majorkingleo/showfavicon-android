@@ -10,10 +10,22 @@ enough.
 
 ## Progress
 
-Implemented, but **not compiled yet**: no Android SDK on the machine this was
-written on, so `./gradlew assembleDebug` is the first real check. The XML
-resources, the resource references and the version catalog are verified
-statically.
+Milestones 1–4 are implemented and the project **builds**: `assembleDebug` and
+`lintDebug` are green, lint reports no findings. Measured on CachyOS with AGP
+9.4.1, Gradle 9.8.0, JDK 21, compiling against API 37.2.
+
+What the first real build revealed — each of these cost a build cycle:
+
+- AGP 9 has **built-in Kotlin**: the `org.jetbrains.kotlin.android` plugin is
+  gone, and `jvmTarget` follows `compileOptions.targetCompatibility`.
+- `androidx.core` 1.19.1 forces `compileSdk = 37` **plus** `compileSdkMinor = 2`;
+  the SDK package for that is `platforms;android-37.2`, and `platforms;android-37`
+  does not exist.
+- The Gradle build cache can hand back a stale resource merge after a resource
+  folder is renamed, which surfaces as `AAPT: resource mipmap/ic_launcher not
+  found`. `--no-build-cache` clears it.
+
+The build details live in `.github/skills/android-build/SKILL.md`.
 
 - [x] **Milestone 0 — toolchain.** `scripts/install-android-toolchain.sh`, with
       the SDK package names verified against Google's repository XML.
@@ -42,16 +54,17 @@ What is needed:
 - **udev rules** — `android-udev`, so device access works without root.
 - **Android SDK** — either through Android Studio's SDK Manager, or headless
   through the `cmdline-tools`.
-- **Kotlin and Gradle are not installed separately**: Kotlin arrives as the
-  Gradle plugin, Gradle through the wrapper (`gradlew`). A system `gradle` is
-  only useful once, to bootstrap the wrapper.
+- **Kotlin and Gradle are not installed separately**: AGP 9 compiles Kotlin
+  itself (built-in Kotlin, no `kotlin-android` plugin), and Gradle comes through
+  the wrapper (`gradlew`).
 - Runtime dependencies (WorkManager, AndroidX, foreground-service APIs) are
   Gradle libraries, not installs.
 
-**Caveat:** the machine already has **JDK 25** (`jdk25-openjdk`). That is too new
-for the Android Gradle Plugin / Gradle combination — pin the build to JDK 21
-(via `archlinux-java` and/or `org.gradle.java.home`), or use Android Studio,
-whose bundled JBR is JDK 21.
+**Caveat:** the machine also carries **JDK 25** (`jdk25-openjdk`), which this
+AGP/Gradle pair does not support. Switch the system default
+(`sudo archlinux-java set java-21-openjdk`) and/or pass
+`JAVA_HOME=/usr/lib/jvm/java-21-openjdk`. The commands below and the VS Code task
+all pass it explicitly, so the build does not depend on the shell default.
 
 Option A — Android Studio (recommended):
 
@@ -63,8 +76,9 @@ paru -S android-studio
 
 `android-studio` is AUR-only in this setup; JetBrains Toolbox is the equivalent
 alternative for self-updating installs. SDK Manager packages:
-`platforms;android-36`, `build-tools;36.0.0`, `platform-tools`, `emulator`,
-`cmdline-tools;latest`, `system-images;android-36;google_apis;x86_64`.
+`platforms;android-37.2`, `build-tools;36.0.0`, `platform-tools`, `emulator`,
+`cmdline-tools;latest`, `system-images;android-36;google_apis;x86_64` (the
+emulator image API level is independent of compileSdk).
 
 Option B — headless, driven from VS Code:
 
@@ -79,7 +93,7 @@ Then the SDK itself, per user and without root: unpack the official
 
 ```fish
 sdkmanager --licenses
-sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" \
+sdkmanager "platform-tools" "platforms;android-37.2" "build-tools;36.0.0" \
   "emulator" "system-images;android-36;google_apis;x86_64"
 ```
 

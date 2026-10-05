@@ -1,6 +1,7 @@
 package com.martin.showfavicon
 
 import android.content.Context
+import androidx.core.content.edit
 
 /**
  * The ordered list of monitored sites.
@@ -45,7 +46,7 @@ class SiteStore(context: Context) {
     }
 
     private fun save(sites: List<String>) {
-        preferences.edit().putString(KEY_SITES, sites.joinToString("\n")).apply()
+        preferences.edit { putString(KEY_SITES, sites.joinToString("\n")) }
     }
 
     private companion object {

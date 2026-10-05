@@ -6,6 +6,7 @@
   them and fall back to minWidth/minHeight.
 -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:description="@string/widget_description"
     android:initialLayout="@layout/widget_sites"
     android:minHeight="40dp"
@@ -15,4 +16,5 @@
     android:targetCellHeight="1"
     android:targetCellWidth="1"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    tools:targetApi="31" />

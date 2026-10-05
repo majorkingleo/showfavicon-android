@@ -1,6 +1,6 @@
 package com.martin.showfavicon
 
-import android.net.Uri
+import androidx.core.net.toUri
 
 /**
  * URL helpers shared by the settings screen and the fetch worker.
@@ -23,7 +23,7 @@ object Urls {
     }
 
     /** Host of a URL, empty when it cannot be parsed. */
-    fun host(url: String): String = Uri.parse(url).host.orEmpty()
+    fun host(url: String): String = url.toUri().host.orEmpty()
 
     /** True when the URL has a host, so `https:///path` is rejected. */
     fun isValid(url: String): Boolean = host(normalize(url)).isNotEmpty()
