@@ -5,7 +5,14 @@ and the site opens in the browser. The icons are refreshed once an hour and
 whenever the device changes networks; a site whose last fetch failed keeps its icon
 but shows it grayed out.
 
-<img src="doc/settings.png" width="300" alt="Settings screen: the list of sites, a URL field with a plus button, and a refresh button">
+<p>
+<img src="screenshots/screenshot_20261006_003956.png" width="260" alt="Home screen: the widget showing one favicon per site">
+<img src="screenshots/settings.png" width="260" alt="Settings screen: the list of sites, a URL field with a plus button, and a refresh button">
+</p>
+
+Left: the widget on the home screen — the green check mark is an SVG favicon, the
+flag came out of an ICO file. Right: the settings screen that maintains the list.
+Both are in [`screenshots/`](screenshots).
 
 ## Status
 
