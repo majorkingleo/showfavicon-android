@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fixed set of icon slots. RemoteViews cannot add children at runtime, so the
+  layout declares as many ImageViews as the widget can show and the provider
+  hides the unused ones with setViewVisibility(). Only the views on the
+  RemoteViews whitelist may be used here, which is why this is a plain
+  LinearLayout with ImageViews.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="horizontal"
+    android:padding="4dp">
+
+    <ImageView
+        android:id="@+id/slot_0"
+        style="@style/WidgetIconSlot" />
+
+    <ImageView
+        android:id="@+id/slot_1"
+        style="@style/WidgetIconSlot" />
+
+    <ImageView
+        android:id="@+id/slot_2"
+        style="@style/WidgetIconSlot" />
+
+    <ImageView
+        android:id="@+id/slot_3"
+        style="@style/WidgetIconSlot" />
+
+    <TextView
+        android:id="@+id/empty_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:padding="4dp"
+        android:text="@string/widget_empty"
+        android:textColor="#9AA0A6"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</LinearLayout>

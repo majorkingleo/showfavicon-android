@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ShowFavicon</string>
+
+    <!-- Settings screen -->
+    <string name="sites_title">Sites</string>
+    <string name="url_hint">example.com</string>
+    <string name="add_site">Add</string>
+    <string name="fetch_now">Refresh now</string>
+    <string name="remove_site">Remove</string>
+    <string name="empty_list">No sites yet. Add one and it shows up in the widget.</string>
+    <string name="error_empty_url">Enter a URL first</string>
+    <string name="error_invalid_url">That does not look like a URL</string>
+    <string name="error_duplicate_url">That site is already in the list</string>
+    <string name="fetch_started">Fetching favicons…</string>
+
+    <!-- Widget -->
+    <string name="widget_description">Favicon per monitored site</string>
+    <string name="widget_slot_description">Website</string>
+    <string name="widget_empty">Add a site in ShowFavicon</string>
+</resources>

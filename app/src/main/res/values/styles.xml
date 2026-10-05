@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      One favicon slot inside the widget. Slots share the available width
+      equally; unused ones are set to GONE by the provider.
+    -->
+    <style name="WidgetIconSlot">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">match_parent</item>
+        <item name="android:layout_margin">2dp</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:contentDescription">@string/widget_slot_description</item>
+        <item name="android:scaleType">centerInside</item>
+    </style>
+</resources>

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Widget metadata. updatePeriodMillis is 0 on purpose: the hourly refresh is
+  driven by WorkManager, the system's own periodic update would only cause an
+  additional wakeup. targetCellWidth/Height are API 31+, older releases ignore
+  them and fall back to minWidth/minHeight.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_description"
+    android:initialLayout="@layout/widget_sites"
+    android:minHeight="40dp"
+    android:minWidth="40dp"
+    android:previewImage="@drawable/ic_site_placeholder"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="1"
+    android:targetCellWidth="1"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

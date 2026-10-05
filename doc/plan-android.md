@@ -8,6 +8,28 @@ A persistent notification can carry the same presence into the status bar later.
 Configuration is **not** drag-and-drop — a settings screen with a list of URLs is
 enough.
 
+## Progress
+
+Implemented, but **not compiled yet**: no Android SDK on the machine this was
+written on, so `./gradlew assembleDebug` is the first real check. The XML
+resources, the resource references and the version catalog are verified
+statically.
+
+- [x] **Milestone 0 — toolchain.** `scripts/install-android-toolchain.sh`, with
+      the SDK package names verified against Google's repository XML.
+- [x] **Milestone 1 — widget and settings.** `FaviconWidgetProvider`,
+      `MainActivity`, `SiteAdapter`, layouts, adaptive launcher icon.
+- [x] **Milestone 2 — fetch and cache.** `FaviconWorker` (hourly WorkManager
+      job), `FaviconFetcher`, `FaviconResolver`, `FaviconStore`.
+- [x] **Milestone 3 — grayed icon.** Desaturation through a `ColorMatrix`,
+      driven by the failed-fetch flag in the store.
+- [ ] **Milestone 4 — multi-site.** A single widget shows one icon per site, up
+      to four slots (`RemoteViews` cannot add views at runtime). The settings
+      list feeds it. Still open: `android:configure` for per-instance sites.
+- [ ] **Milestone 5 — notification.** Optional, and not started.
+- [ ] **Milestone 6 — share intent.** Not started.
+- [ ] **Milestone 7 — AAB release.** Not started.
+
 ## Toolchain (Linux / CachyOS)
 
 Target workstation: Arch-based, `pacman` plus an AUR helper (`paru`/`yay`).

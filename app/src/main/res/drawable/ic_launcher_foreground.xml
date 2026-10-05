@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Foreground layer: a ring, drawn inside the 66dp safe zone of the icon. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26 A28,28 0 1,1 53.9,26 Z" />
+
+    <path
+        android:fillColor="#1F6FEB"
+        android:pathData="M54,40 A14,14 0 1,1 53.9,40 Z" />
+</vector>
