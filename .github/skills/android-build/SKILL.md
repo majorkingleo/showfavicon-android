@@ -286,6 +286,53 @@ Two lessons that came out of exactly this workflow:
   (`AppWidgetServiceImpl: removeWidgetLocked`). Announce any visual check of the
   widget together with re-placing it, or expect "the widget is gone".
 
+#### Crafting icon bytes
+
+Real sites are luck, which is no good for a decoder. Debug builds allow cleartext
+(`app/src/debug/AndroidManifest.xml`), so a server on the host becomes a test site,
+and `10.0.2.2` is how the emulator reaches the host:
+
+```fish
+python3 -m http.server 8000 --bind 0.0.0.0     # run in the directory with the files
+```
+
+Two things about that setup cost a round trip each:
+
+- The site URL has to be a *page*. `http://10.0.2.2:8000/a` works because the server
+  answers a directory listing — but the `/favicon.ico` fallback is looked up at the
+  **origin root**, like a browser does it, not inside `/a`. Give each variant an
+  `index.html` with `<link rel="icon" href="/a/favicon.ico">`.
+- The cache file is named after the host, so everything served from `10.0.2.2`
+  writes the same `10.0.2.2.png`. Test one variant per run and pull the PNG before
+  the next run; four at once are only distinguishable in the log.
+
+Pull and check without an image viewer, which is what makes a pixel a fact:
+
+```fish
+adb -s emulator-5554 exec-out run-as com.martin.showfavicon cat files/showfavicon/<host>.png > /tmp/icon.png
+magick /tmp/icon.png -format "%wx%h %[pixel:p{0,0}] %[pixel:p{1,0}]\n" info:
+```
+
+### 8. A second device changes every command
+
+With the phone plugged in next to the emulator, three things break in ways that do
+not name the real cause:
+
+- `adb shell …` fails with `more than one device/emulator`.
+- `./gradlew installDebug` fails the same way, reported as `BUILD FAILED` with the
+  reason far above the tail you are reading.
+- `adb wait-for-device` returns **immediately** — a phone in `device` state already
+  satisfies it. `scripts/emulator-run.sh` read that as "no emulator" and gave up
+  before the emulator had finished starting.
+
+`ANDROID_SERIAL=emulator-5554` fixes the Gradle side, `adb -s emulator-5554` the
+rest, and the script now polls for an `emulator-*` serial instead of waiting for *a*
+device. Check the list before blaming the code:
+
+```fish
+adb devices -l
+```
+
 ## What green looks like
 
 ```

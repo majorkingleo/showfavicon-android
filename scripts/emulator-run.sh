@@ -26,9 +26,11 @@ BOOT_TIMEOUT=300
 # Cold boot only, so a snapshot left behind by an abrupt shutdown cannot break
 # the next start. GPU: the host default (gfxstream) crashes this emulator during
 # boot, and plain `swiftshader_indirect` boots but never renders the IME window
-# (isVisible=true, HAS_DRAWN, no keyboard on screen), so ANGLE is the middle
-# ground.
-EMULATOR_FLAGS=(-no-boot-anim -no-snapshot -gpu angle_indirect)
+# (isVisible=true, HAS_DRAWN, no keyboard on screen), so ANGLE is the default.
+# Override with EMULATOR_GPU=… — a test that needs no keyboard can use
+# `swiftshader_indirect`, which is the more stable of the two.
+EMULATOR_GPU="${EMULATOR_GPU:-angle_indirect}"
+EMULATOR_FLAGS=(-no-boot-anim -no-snapshot -gpu "$EMULATOR_GPU")
 
 # AGP 9.4 does not accept JDK 25, and this machine has it too.
 JAVA_HOME_ANDROID="/usr/lib/jvm/java-21-openjdk"
@@ -128,8 +130,17 @@ boot_emulator() {
     fi
 
     step "Waiting for boot (max ${BOOT_TIMEOUT}s)"
-    adb wait-for-device
-    local serial
+    # Not `adb wait-for-device`: that returns as soon as *any* device is ready,
+    # and a phone plugged in next to the emulator satisfies it immediately.
+    local waited=0
+    while [[ -z "$serial" ]]; do
+        if (( waited >= BOOT_TIMEOUT )); then
+            die "adb never saw an emulator — see $EMULATOR_LOG"
+        fi
+        sleep 5
+        waited=$(( waited + 5 ))
+        printf '.'
+    done
     serial="$(emulator_serial)"
     [[ -n "$serial" ]] || die "adb does not see an emulator — see $EMULATOR_LOG"
 
@@ -153,12 +164,20 @@ boot_emulator() {
 }
 
 install_and_launch() {
+    local serial
+    serial="$(emulator_serial)"
+    [[ -n "$serial" ]] || die "no emulator to install on"
+
     step "Installing the debug build"
-    env JAVA_HOME="$JAVA_HOME_ANDROID" ./gradlew --console=plain installDebug
+    # ANDROID_SERIAL keeps the install on the emulator when a phone is attached
+    # as well: Gradle refuses to choose between two devices.
+    env JAVA_HOME="$JAVA_HOME_ANDROID" ANDROID_SERIAL="$serial" \
+        ./gradlew --console=plain installDebug
 
     step "Starting the app"
-    adb shell am start -n "$ACTIVITY" >/dev/null
-    info "started $ACTIVITY"
+    # Explicit -s for the same reason: a bare `adb shell` is ambiguous then.
+    adb -s "$serial" shell am start -n "$ACTIVITY" >/dev/null
+    info "started $ACTIVITY on $serial"
     info "screenshot: adb exec-out screencap -p > /tmp/emulator.png"
 }
 

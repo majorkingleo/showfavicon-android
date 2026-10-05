@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Debug builds may talk cleartext. Real sites still answer plain http, and a
+      local test server on 10.0.2.2 is the only way to feed the icon decoders
+      crafted bytes. The release manifest keeps the platform default: https only.
+    -->
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>
