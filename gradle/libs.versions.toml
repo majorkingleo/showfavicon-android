@@ -3,6 +3,9 @@
 # Gradle plugin, so no kotlin-android plugin is declared anywhere.
 [versions]
 agp = "9.4.1"
+# Apache-2.0, plain Java, no transitive dependencies. Last release 2019, but it
+# only draws onto Canvas/Path/Bitmap, which have not changed since.
+androidsvg = "1.4"
 coreKtx = "1.19.1"
 appcompat = "1.8.0"
 material = "1.14.0"
@@ -11,6 +14,9 @@ work = "2.12.0"
 coroutines = "1.11.0"
 
 [libraries]
+# SVG icons have to be rendered to a bitmap before they can be cached; Android
+# ships no SVG decoder and BitmapFactory cannot read one.
+androidsvg = { group = "com.caverock", name = "androidsvg", version.ref = "androidsvg" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-recyclerview = { group = "androidx.recyclerview", name = "recyclerview", version.ref = "recyclerview" }

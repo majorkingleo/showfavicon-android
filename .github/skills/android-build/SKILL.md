@@ -208,10 +208,83 @@ Consequence: verify keyboard behaviour on a device, not here. The app side is
 hardened anyway, because both halves of the trap are real: an `OnClickListener`
 on a focusable `EditText` is swallowed by the focus change (use `setOnTouchListener`
 on `ACTION_UP`), and an IME that believes it is still shown issues no new show
-request (`InputMethodManager.showSoftInput`). Note that `input text` injects key
-events through whatever IME is armed, so it can silently produce text the app
-never received — seeding the `SharedPreferences` file through `run-as` is the
-dependable way to put data into the app.
+request (`InputMethodManager.showSoftInput`). Both were written here after the
+failure and **confirmed on a device by the user**: the keyboard now opens.
+
+Two things go with that, so the next screen with a text field does not repeat the
+round trip:
+
+- Give the screen a way to close the keyboard. Here that is a **Done** action in
+  the toolbar (`finish()` plus `hideSoftInputFromWindow`) and the IME's own Done
+  key, which now hides the keyboard instead of leaving it over the list.
+- A keyboard that cannot be dismissed looks like an app bug — it was the first
+  thing the user reported.
+
+Injecting input into the emulator has its own traps:
+
+- `adb shell input text` injects key events through whatever IME is armed, so it
+  can silently produce text the app never received: `github.com` arrived as
+  `github`, `wikipedia.org` as
+  `serverhealthcheckwikipedia.org.borger.co.at`. Seed the `SharedPreferences`
+  file through `run-as` plus `adb push` instead; that is the dependable way to
+  put data into a debuggable app.
+- A tap right after `am start -W`, or after the screen woke up, is often
+  swallowed. Send `adb shell input keyevent 224` (WAKEUP) first, and confirm the
+  driver is still `MainActivity` before tapping.
+- Never trust that a tap worked: check its effect. A click on *Refresh now* shows
+  up in `logcat` as `WM-SystemJobScheduler: Scheduling work ID … (…FaviconWorker)`
+  and as a Toast line, and its result lands in `shared_prefs`, which `run-as` can
+  read.
+- The offline path is testable with `adb shell cmd connectivity airplane-mode
+  enable` (and `disable` again afterwards — leaving it on looks exactly like a
+  broken app on the next run).
+
+### 7. Running the fetch without the UI
+
+A `adb shell input tap` into this app is unreliable: right after `am start` the
+launcher often owns the focus again and the tap lands on the home screen. To
+exercise the fetch itself, skip the UI. Clearing the app data is the dependable
+trigger, because a cleared app re-enqueues its periodic work and WorkManager runs
+the first execution immediately (about a second):
+
+```fish
+adb shell pm clear com.martin.showfavicon
+adb push /tmp/sites.xml /data/local/tmp/sites.xml
+adb shell run-as com.martin.showfavicon mkdir -p shared_prefs
+adb shell run-as com.martin.showfavicon cp /data/local/tmp/sites.xml shared_prefs/sites.xml
+adb shell rm /data/local/tmp/sites.xml
+adb logcat -c
+adb shell am start -W -n com.martin.showfavicon/.MainActivity
+```
+
+`/tmp/sites.xml` is a plain `SharedPreferences` file (`<map>` with a newline
+separated `list` string). Then read what the worker did:
+
+```fish
+adb logcat -d -s ShowFaviconFetch | tail -25
+adb shell run-as com.martin.showfavicon cat shared_prefs/fetch_state.xml
+adb shell run-as com.martin.showfavicon ls -l files/showfavicon
+adb exec-out run-as com.martin.showfavicon cat files/showfavicon/<host>.png > /tmp/icon.png
+```
+
+The last one is worth doing with an image viewer: it shows whether an icon was
+really rasterised or whether a placeholder is being looked at.
+
+`adb shell cmd jobscheduler run -f com.martin.showfavicon <id>` looks like the
+in-place alternative — the id is in `dumpsys jobscheduler` (`grep -oE "u0a218/[0-9]+"`,
+job `androidx.work.systemjobscheduler:u0a218/1`) — but it answers `Could not find
+job 1 in package com.martin.showfavicon / user 0`. Use the `pm clear` route.
+
+Two lessons that came out of exactly this workflow:
+
+- The fetch log is the fastest diagnosis for a missing icon. A site that stayed on
+  the placeholder logged a candidate URL the resolver had built wrong (a relative
+  href glued onto the host: `https://hostfavicon.php` → `UnknownHostException`),
+  and the icon *format* was only the second problem. See "Decoding the icon bytes"
+  in `doc/plan-android.md`.
+- `installDebug` **removes a placed widget** from the home screen
+  (`AppWidgetServiceImpl: removeWidgetLocked`). Announce any visual check of the
+  widget together with re-placing it, or expect "the widget is gone".
 
 ## What green looks like
 

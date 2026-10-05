@@ -43,6 +43,8 @@ android {
 }
 
 dependencies {
+    // Renders SVG favicons that BitmapFactory cannot decode.
+    implementation(libs.androidsvg)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.recyclerview)

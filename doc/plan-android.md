@@ -27,6 +27,15 @@ What the first real build revealed — each of these cost a build cycle:
 
 The build details live in `.github/skills/android-build/SKILL.md`.
 
+The first *real* icon run then surfaced a second class of problem. `github.com`
+fetched fine while `serverhealthcheck.borger.co.at` stayed on the placeholder, and
+the cause was not the icon format at all: a configured site URL has no path
+(`https://host`), so `URI.resolve` glued the relative href onto the authority —
+`favicon.php?ts=…` became `https://hostfavicon.php`, an `UnknownHostException`.
+GitHub's page uses absolute hrefs, which is exactly why the bug stayed hidden.
+After the fix the same site needed the second, genuinely new piece: its favicon is
+an SVG. Both are described under "Decoding the icon bytes".
+
 - [x] **Milestone 0 — toolchain.** `scripts/install-android-toolchain.sh`, with
       the SDK package names verified against Google's repository XML.
 - [x] **Milestone 1 — widget and settings.** `FaviconWidgetProvider`,
@@ -35,9 +44,11 @@ The build details live in `.github/skills/android-build/SKILL.md`.
       job), `FaviconFetcher`, `FaviconResolver`, `FaviconStore`.
 - [x] **Milestone 3 — grayed icon.** Desaturation through a `ColorMatrix`,
       driven by the failed-fetch flag in the store.
-- [ ] **Milestone 4 — multi-site.** A single widget shows one icon per site, up
-      to four slots (`RemoteViews` cannot add views at runtime). The settings
-      list feeds it. Still open: `android:configure` for per-instance sites.
+- [x] **Milestone 4 — multi-site.** One widget shows up to four icons (one slot
+      per site; `RemoteViews` cannot add views at runtime), fed by the settings
+      list. The per-instance `android:configure` path was dropped by decision:
+      the widget always shows the first four sites and the settings list is the
+      single place to edit them.
 - [ ] **Milestone 5 — notification.** Optional, and not started.
 - [ ] **Milestone 6 — share intent.** Not started.
 - [ ] **Milestone 7 — AAB release.** Not started.
@@ -166,6 +177,51 @@ cell is a legal widget size for the one-icon case.
   the full-color favicon appears in the notification's large icon / expanded
   view. On the home-screen widget full colour works, so the widget is the better
   place for the real favicon.
+
+## Decoding the icon bytes
+
+Two different things went wrong on the first real site, and only one of them was
+about the icon format.
+
+**The href, not the icon.** `https://serverhealthcheck.borger.co.at/` announces its
+icon as a *relative* reference, `favicon.php?ts=…`. A configured site URL carries
+no path of its own (`https://host`), and against such a base `URI.resolve` does not
+insert the root: the reference lands in the authority and the result is
+`https://hostfavicon.php`, which fails with `UnknownHostException`. The fallback
+`/favicon.ico` then answered 404, so the whole fetch failed and the widget drew the
+placeholder — with the network up and github.com succeeding in the same run.
+Absolute hrefs (`https://github.com/fluidicon.png`) never trigger this, which is why
+it stayed hidden. Fixed by rooting the base before resolving
+(`FaviconResolver.resolve`); measured after the fix:
+
+    candidates for https://serverhealthcheck.borger.co.at:
+      [/favicon.php?ts=…, /favicon.ico]
+    candidate …/favicon.php?ts=… -> 252 bytes, svg=true
+    candidate …/favicon.php?ts=… -> icon 6255        # 192×192 PNG in the cache
+
+**Then the format.** `BitmapFactory` decides what can be displayed, and it covers
+raster formats only (PNG, JPEG, WebP, GIF, BMP). That leaves two gaps:
+
+- **SVG** — the only icon the site above offers is served as `image/svg+xml`.
+- **ICO** — `BitmapFactory` cannot decode `.ico` at all, so a site that offers only
+  `/favicon.ico` fails the same way, however reachable it is.
+
+Work order, decided after the measurement above:
+
+1. **B — render SVG. Done.** `SvgRasterizer` sniffs the bytes, renders through
+   `AndroidSVG` onto a transparent 192×192 canvas and hands PNG bytes to the
+   unchanged store, so the widget path does not change. A library rather than a hand
+   written subset renderer: gradients, transforms and strokes keep working for a few
+   lines of integration, and a subset renderer would silently degrade to the
+   placeholder.
+2. **C — unpack ICO. Open.** Parse the container (`00 00 01 00` plus 16 byte
+   directory entries), take the largest entry, pass an embedded PNG through
+   unchanged, build a `Bitmap` from a DIB entry (BITMAPINFOHEADER plus the AND mask
+   for transparency), reject the rest.
+
+Still open, smaller: relative hrefs are resolved against the *requested* URL. After
+a redirect they belong to the *final* URL (`HttpURLConnection.url`), otherwise the
+icon path points into the wrong directory.
 
 ## Milestones
 

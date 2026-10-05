@@ -18,8 +18,9 @@ object FaviconResolver {
 
     /**
      * Candidate URLs for [html], best first, with [baseUrl] resolving relative
-     * hrefs. Vector icons are skipped because BitmapFactory cannot decode SVG,
-     * and the site's `/favicon.ico` is always the last resort.
+     * hrefs. A vector icon ranks below a raster one because it has to be
+     * rasterised before it can be cached, and the site's `/favicon.ico` is always
+     * the last resort.
      */
     fun candidates(html: String, baseUrl: String): List<String> {
         val declared = LINK_TAG.findAll(html)
@@ -40,21 +41,21 @@ object FaviconResolver {
         if (href.isEmpty() || href.startsWith("data:")) return null
 
         val type = TYPE_ATTRIBUTE.find(tag)?.groupValues?.get(1)?.lowercase().orEmpty()
-        if (type.contains("svg") || href.substringBefore('?').endsWith(".svg", ignoreCase = true)) {
-            return null
-        }
+        val vector = type.contains("svg") ||
+            href.substringBefore('?').endsWith(".svg", ignoreCase = true)
 
         val absolute = resolve(baseUrl, href) ?: return null
-        return rank(rel) to absolute
+        return rank(rel, vector) to absolute
     }
 
     /**
      * Apple touch icons are usually the largest PNG a site ships, a `mask-icon`
-     * is monochrome artwork, everything else is a plain icon declaration.
+     * is monochrome artwork, and a vector is a vector.
      */
-    private fun rank(rel: String): Int = when {
+    private fun rank(rel: String, vector: Boolean): Int = when {
         rel.contains("apple-touch-icon") -> 0
-        rel.contains("mask-icon") -> 2
+        rel.contains("mask-icon") -> 3
+        vector -> 2
         else -> 1
     }
 
@@ -69,7 +70,21 @@ object FaviconResolver {
         if (href.startsWith("http://") || href.startsWith("https://")) {
             href
         } else {
-            URI(baseUrl).resolve(href).toString()
+            val base = URI(baseUrl)
+            // A site URL like "https://host" has an empty path, and URI.resolve
+            // then puts the reference into the authority:
+            // "favicon.php" became "https://hostfavicon.php", which does not
+            // resolve. Root the base before resolving anything relative.
+            val rooted = URI(
+                base.scheme,
+                base.userInfo,
+                base.host,
+                base.port,
+                base.path.orEmpty().ifEmpty { "/" },
+                base.query,
+                base.fragment,
+            )
+            rooted.resolve(href).toString()
         }
     }.getOrNull()
 }

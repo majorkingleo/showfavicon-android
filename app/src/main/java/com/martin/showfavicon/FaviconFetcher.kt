@@ -1,5 +1,6 @@
 package com.martin.showfavicon
 
+import android.util.Log
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -19,7 +20,9 @@ class FaviconFetcher {
 
     /** Icon bytes for [siteUrl], or null when nothing usable could be fetched. */
     fun fetch(siteUrl: String): ByteArray? {
-        val html = get(siteUrl, MAX_HTML_BYTES, ACCEPT_HTML)?.toString(Charsets.UTF_8)
+        val page = get(siteUrl, MAX_HTML_BYTES, ACCEPT_HTML)
+        Log.d(TAG, "page $siteUrl -> ${page?.size ?: "failed"}")
+        val html = page?.toString(Charsets.UTF_8)
 
         val candidates = if (html == null) {
             // The page itself failed, but the icon may still be reachable.
@@ -27,11 +30,21 @@ class FaviconFetcher {
         } else {
             FaviconResolver.candidates(html, siteUrl)
         }
+        Log.d(TAG, "candidates for $siteUrl: $candidates")
 
         for (candidate in candidates) {
             val bytes = get(candidate, MAX_ICON_BYTES, ACCEPT_ANY) ?: continue
+            val vector = SvgRasterizer.looksLikeSvg(bytes)
+            Log.d(TAG, "candidate $candidate -> ${bytes.size} bytes, svg=$vector")
+            val icon = if (vector) {
+                // Rasterise so the cache holds a PNG either way.
+                SvgRasterizer.toPng(bytes, ICON_SIZE_PX)
+            } else {
+                bytes
+            }
+            Log.d(TAG, "candidate $candidate -> icon ${icon?.size ?: "null"}")
             // A 404 page served with a 200 status must not end up in the cache.
-            if (FaviconStore.isDecodable(bytes)) return bytes
+            if (icon != null && FaviconStore.isDecodable(icon)) return icon
         }
         return null
     }
@@ -53,11 +66,13 @@ class FaviconFetcher {
             connection.setRequestProperty("Accept-Encoding", "identity")
 
             if (connection.responseCode !in 200..299) {
+                Log.d(TAG, "$url -> HTTP ${connection.responseCode}")
                 null
             } else {
                 connection.inputStream.use { it.readAtMost(maxBytes) }
             }
         } catch (io: IOException) {
+            Log.d(TAG, "$url -> ${io.javaClass.simpleName}: ${io.message}")
             null
         } finally {
             connection.disconnect()
@@ -65,9 +80,13 @@ class FaviconFetcher {
     }
 
     private companion object {
+        const val TAG = "ShowFaviconFetch"
         const val TIMEOUT_MS = 10_000
         const val MAX_HTML_BYTES = 256 * 1024
         const val MAX_ICON_BYTES = 512 * 1024
+
+        /** Longest edge of a rasterised vector icon; the widget draws at 96 px. */
+        const val ICON_SIZE_PX = 192
         const val ACCEPT_HTML = "text/html,application/xhtml+xml"
         const val ACCEPT_ANY = "image/*,*/*;q=0.8"
 
