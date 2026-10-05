@@ -11,7 +11,21 @@
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
-        app:title="@string/sites_title" />
+        app:title="@string/sites_title">
+
+        <!--
+          The screen's one way out, and deliberately a real button: as a toolbar
+          menu item it was not read as something to press. It stays in the corner,
+          where the eye looks for it, but in the same style as the other buttons.
+        -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/done_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="8dp"
+            android:text="@string/done" />
+    </com.google.android.material.appbar.MaterialToolbar>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -30,11 +44,14 @@
             android:inputType="textUri"
             android:maxLines="1" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/add_button"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/add_site" />
+            android:contentDescription="@string/add_site"
+            app:icon="@drawable/ic_add"
+            app:iconTint="?attr/colorOnPrimary" />
     </LinearLayout>
 
     <Button

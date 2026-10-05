@@ -2,8 +2,6 @@ package com.martin.showfavicon
 
 import android.annotation.SuppressLint
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodManager
@@ -18,6 +16,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.button.MaterialButton
 
 /**
  * The settings screen: the list of monitored sites.
@@ -33,7 +32,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var sites: SiteStore
     private lateinit var adapter: SiteAdapter
     private lateinit var urlInput: EditText
-    private lateinit var addButton: Button
+    private lateinit var addButton: MaterialButton
     private lateinit var emptyHint: TextView
 
     /** URL of the site the field is editing, or null while a new site is typed. */
@@ -66,6 +65,7 @@ class MainActivity : AppCompatActivity() {
         addButton = findViewById(R.id.add_button)
         addButton.setOnClickListener { submitInput() }
         findViewById<Button>(R.id.refresh_button).setOnClickListener { fetchNow() }
+        findViewById<Button>(R.id.done_button).setOnClickListener { finishConfiguration() }
         // The keyboard's own Done key commits the field and then gets out of the
         // way; without this the keyboard stayed up with nothing to close it.
         urlInput.setOnEditorActionListener { _, _, _ ->
@@ -140,20 +140,6 @@ class MainActivity : AppCompatActivity() {
         manager.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuInflater.inflate(R.menu.main_menu, menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean = when (item.itemId) {
-        R.id.action_done -> {
-            finishConfiguration()
-            true
-        }
-
-        else -> super.onOptionsItemSelected(item)
-    }
-
     /**
      * Leaves the screen and takes the keyboard down with it. Every change to the
      * list is saved as it happens, so there is nothing to confirm here.
@@ -213,7 +199,8 @@ class MainActivity : AppCompatActivity() {
         urlInput.setText(site)
         urlInput.setSelection(site.length)
         urlInput.error = null
-        addButton.text = getString(R.string.save_site)
+        addButton.setIconResource(R.drawable.ic_check)
+        addButton.contentDescription = getString(R.string.save_site)
         adapter.setEditing(site)
         showKeyboard(urlInput)
     }
@@ -222,7 +209,8 @@ class MainActivity : AppCompatActivity() {
     private fun leaveEditMode() {
         editing = null
         clearInput()
-        addButton.text = getString(R.string.add_site)
+        addButton.setIconResource(R.drawable.ic_add)
+        addButton.contentDescription = getString(R.string.add_site)
         adapter.setEditing(null)
     }
 

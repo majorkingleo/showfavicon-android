@@ -5,8 +5,8 @@
     <!-- Settings screen -->
     <string name="sites_title">Sites</string>
     <string name="url_hint">example.com</string>
-    <string name="add_site">Add</string>
-    <string name="save_site">Save</string>
+    <string name="add_site">Add site</string>
+    <string name="save_site">Save site</string>
     <string name="edit_site">Edit %1$s</string>
     <string name="fetch_now">Refresh now</string>
     <string name="remove_site">Remove</string>

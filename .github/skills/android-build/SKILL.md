@@ -233,9 +233,15 @@ failure and **confirmed on a device by the user**: the keyboard now opens.
 Two things go with that, so the next screen with a text field does not repeat the
 round trip:
 
-- Give the screen a way to close the keyboard. Here that is a **Done** action in
-  the toolbar (`finish()` plus `hideSoftInputFromWindow`) and the IME's own Done
-  key, which now hides the keyboard instead of leaving it over the list.
+- Give the screen a way to close the keyboard. Here that is a **Done** button
+  (`finish()` plus `hideSoftInputFromWindow`) and the IME's own Done key, which
+  hides the keyboard instead of leaving it over the list.
+- Its look and its place were two separate problems, and changing both at once was
+  wrong. As a toolbar *menu item* it was not read as something to press, so it had
+  to become a real button — but moving it beside *Refresh now* gave away a corner
+  the user wanted to keep. A `MaterialButton` as a **child of the toolbar** with
+  `layout_gravity="end"` solves both: same corner, same button style as the rest of
+  the screen.
 - A keyboard that cannot be dismissed looks like an app bug — it was the first
   thing the user reported.
 
