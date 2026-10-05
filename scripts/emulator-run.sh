@@ -23,6 +23,12 @@ APP_ID="com.martin.showfavicon"
 ACTIVITY="${APP_ID}/.MainActivity"
 BOOT_TIMEOUT=300
 
+# Software rendering on purpose: the host GL path (gfxstream) fails on this
+# machine with "error null ctx" and took the emulator down mid-install once.
+# Cold boot only, so a snapshot left behind by an abrupt shutdown cannot break
+# the next start.
+EMULATOR_FLAGS=(-no-boot-anim -no-snapshot -gpu swiftshader_indirect)
+
 # AGP 9.4 does not accept JDK 25, and this machine has it too.
 JAVA_HOME_ANDROID="/usr/lib/jvm/java-21-openjdk"
 
@@ -88,6 +94,10 @@ emulator_serial() {
     adb devices | awk '$1 ~ /^emulator-/ { print $1; exit }'
 }
 
+device_state() {
+    adb devices | awk -v serial="$1" '$1 == serial { print $2; exit }'
+}
+
 stop_emulator() {
     local serial
     serial="$(emulator_serial)"
@@ -111,15 +121,25 @@ boot_emulator() {
         if command -v setsid >/dev/null 2>&1; then
             launcher=(setsid nohup)
         fi
-        "${launcher[@]}" "$EMULATOR" -avd "$AVD_NAME" -no-boot-anim \
+        "${launcher[@]}" "$EMULATOR" -avd "$AVD_NAME" "${EMULATOR_FLAGS[@]}" \
             >"$EMULATOR_LOG" 2>&1 </dev/null &
         info "log: $EMULATOR_LOG"
     fi
 
     step "Waiting for boot (max ${BOOT_TIMEOUT}s)"
     adb wait-for-device
+    local serial
+    serial="$(emulator_serial)"
+    [[ -n "$serial" ]] || die "adb does not see an emulator — see $EMULATOR_LOG"
+
+    # Both have to hold: adb calls it "device", and the guest finished booting.
+    # An emulator that died on the way is reported instead of waited for.
     local waited=0
-    until [[ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]; do
+    until [[ "$(device_state "$serial")" == "device" \
+        && "$(adb -s "$serial" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')" == "1" ]]; do
+        if [[ -z "$(emulator_serial)" ]]; then
+            die "the emulator disappeared while booting — see $EMULATOR_LOG"
+        fi
         if (( waited >= BOOT_TIMEOUT )); then
             die "the emulator did not finish booting in ${BOOT_TIMEOUT}s — see $EMULATOR_LOG"
         fi
@@ -128,7 +148,7 @@ boot_emulator() {
         printf '.'
     done
     printf '\n'
-    info "booted after ${waited}s"
+    info "booted after ${waited}s, adb reports $serial as 'device'"
 }
 
 install_and_launch() {

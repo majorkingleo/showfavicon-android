@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Material 3 theme, follows the system day/night setting. -->
-    <style name="Theme.ShowFavicon" parent="Theme.Material3.DayNight" />
+    <!--
+      Material 3 theme, follows the system day/night setting.
+
+      NoActionBar on purpose: with edge-to-edge (enforced from targetSdk 35 on,
+      Android 15) the decor's ActionBar is drawn over the content, which hid the
+      whole input row. The toolbar lives in the layout instead, where the insets
+      applied in MainActivity move it below the status bar.
+    -->
+    <style name="Theme.ShowFavicon" parent="Theme.Material3.DayNight.NoActionBar" />
 </resources>

@@ -7,6 +7,9 @@ import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
@@ -27,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        setTitle(R.string.sites_title)
+        applyWindowInsets(findViewById(R.id.root))
 
         sites = SiteStore(this)
         urlInput = findViewById(R.id.url_input)
@@ -50,6 +53,29 @@ class MainActivity : AppCompatActivity() {
         // even when the user never places the widget.
         FaviconWorker.schedule(this)
         showSites()
+    }
+
+    /**
+     * Edge-to-edge is enforced from targetSdk 35 on, so the content view spans the
+     * whole screen, status and navigation bars included. The toolbar would sit
+     * under the status bar and the last list row under the navigation bar
+     * without this. The base padding is read once so repeated inset passes do
+     * not add up.
+     */
+    private fun applyWindowInsets(root: View) {
+        val basePaddingTop = root.paddingTop
+        val basePaddingBottom = root.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            view.updatePadding(
+                top = basePaddingTop + bars.top,
+                bottom = basePaddingBottom + bars.bottom,
+            )
+            // Not consumed: children may still want to know about the insets.
+            insets
+        }
     }
 
     private fun addCurrentInput() {
