@@ -58,7 +58,26 @@ tail -60 /tmp/build.log
 ```
 
 In VS Code the task **Android: build debug APK** (`.vscode/tasks.json`, on
-Ctrl+Shift+B) runs the same command and pins the same `JAVA_HOME`.
+Ctrl+Shift+B) runs the same command and pins the same `JAVA_HOME`. The tasks
+**Android: run on emulator** and **Android: stop emulator** call
+`scripts/emulator-run.sh`.
+
+### The emulator
+
+```fish
+./scripts/emulator-run.sh          # AVD anlegen, booten, installDebug, App starten
+./scripts/emulator-run.sh --stop   # adb emu kill
+```
+
+The script starts the emulator **detached** (`setsid nohup … &`), so it survives
+the script and its task shell — which also means closing the window is not the
+only way to stop it, and not always a working one. `adb emu kill` is the
+reliable shutdown; `adb devices` then has to become empty, and `pgrep -c qemu-system`
+has to reach zero.
+
+Screenshots of the *device*, unaffected by window scaling or the host desktop,
+come from `adb exec-out screencap -p > /tmp/emu.png`. `adb shell wm size` reports
+the pixel dimensions that `adb shell input tap X Y` expects.
 
 ## Where things land
 

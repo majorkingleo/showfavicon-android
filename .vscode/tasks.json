@@ -22,6 +22,24 @@
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"label": "Android: run on emulator",
+			"detail": "create the AVD if missing, boot it, installDebug, launch the app",
+			"type": "shell",
+			"command": "./scripts/emulator-run.sh",
+			"problemMatcher": [],
+			"group": "test"
+		},
+		{
+			"label": "Android: stop emulator",
+			"detail": "shut the running emulator down (adb emu kill)",
+			"type": "shell",
+			"command": "./scripts/emulator-run.sh",
+			"args": [
+				"--stop"
+			],
+			"problemMatcher": []
 		}
 	]
 }
