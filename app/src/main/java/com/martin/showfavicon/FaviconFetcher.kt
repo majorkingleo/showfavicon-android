@@ -34,13 +34,18 @@ class FaviconFetcher {
 
         for (candidate in candidates) {
             val bytes = get(candidate, MAX_ICON_BYTES, ACCEPT_ANY) ?: continue
-            val vector = SvgRasterizer.looksLikeSvg(bytes)
-            Log.d(TAG, "candidate $candidate -> ${bytes.size} bytes, svg=$vector")
-            val icon = if (vector) {
-                // Rasterise so the cache holds a PNG either way.
-                SvgRasterizer.toPng(bytes, ICON_SIZE_PX)
-            } else {
-                bytes
+            val kind = when {
+                SvgRasterizer.looksLikeSvg(bytes) -> "svg"
+                IcoDecoder.looksLikeIco(bytes) -> "ico"
+                else -> "raster"
+            }
+            Log.d(TAG, "candidate $candidate -> ${bytes.size} bytes, $kind")
+            // Vector and container icons are converted here, so that the cache holds
+            // a PNG either way and nothing downstream knows about the formats.
+            val icon = when (kind) {
+                "svg" -> SvgRasterizer.toPng(bytes, ICON_SIZE_PX)
+                "ico" -> IcoDecoder.toPng(bytes)
+                else -> bytes
             }
             Log.d(TAG, "candidate $candidate -> icon ${icon?.size ?: "null"}")
             // A 404 page served with a 200 status must not end up in the cache.
@@ -49,27 +54,57 @@ class FaviconFetcher {
         return null
     }
 
+    /**
+     * Fetches [url] and follows up to [MAX_REDIRECTS] redirects by hand.
+     *
+     * `HttpURLConnection` refuses a hop that changes the protocol, and sites do
+     * exactly that: an icon requested over https may answer 301 to http, and a page
+     * typed as http answers 301 to https.
+     */
     private fun get(url: String, maxBytes: Int, accept: String): ByteArray? {
+        var target = url
+        repeat(MAX_REDIRECTS + 1) {
+            val answer = request(target, maxBytes, accept) ?: return null
+            if (answer.bytes != null) return answer.bytes
+
+            val location = answer.location ?: return null
+            target = Urls.resolve(target, location) ?: return null
+        }
+        Log.d(TAG, "$target -> too many redirects")
+        return null
+    }
+
+    /** One request: either with a body, or with the redirect it asks for instead. */
+    private fun request(url: String, maxBytes: Int, accept: String): Answer? {
         val connection = try {
             URL(url).openConnection() as HttpURLConnection
         } catch (io: IOException) {
+            Log.d(TAG, "$url -> ${io.javaClass.simpleName}: ${io.message}")
             return null
         }
 
         return try {
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS
-            connection.instanceFollowRedirects = true
+            // Followed by hand, see get().
+            connection.instanceFollowRedirects = false
             connection.setRequestProperty("User-Agent", USER_AGENT)
             connection.setRequestProperty("Accept", accept)
             // No transparent gzip: the byte count has to stay predictable.
             connection.setRequestProperty("Accept-Encoding", "identity")
 
-            if (connection.responseCode !in 200..299) {
-                Log.d(TAG, "$url -> HTTP ${connection.responseCode}")
-                null
-            } else {
-                connection.inputStream.use { it.readAtMost(maxBytes) }
+            when (val code = connection.responseCode) {
+                in 200..299 -> Answer(connection.inputStream.use { it.readAtMost(maxBytes) }, null)
+                in 300..399 -> {
+                    val location = connection.getHeaderField("Location")
+                    Log.d(TAG, "$url -> HTTP $code to $location")
+                    Answer(null, location)
+                }
+
+                else -> {
+                    Log.d(TAG, "$url -> HTTP $code")
+                    Answer(null, null)
+                }
             }
         } catch (io: IOException) {
             Log.d(TAG, "$url -> ${io.javaClass.simpleName}: ${io.message}")
@@ -79,11 +114,17 @@ class FaviconFetcher {
         }
     }
 
+    /** Body or redirect target of a single request, never both. */
+    private class Answer(val bytes: ByteArray?, val location: String?)
+
     private companion object {
         const val TAG = "ShowFaviconFetch"
         const val TIMEOUT_MS = 10_000
         const val MAX_HTML_BYTES = 256 * 1024
         const val MAX_ICON_BYTES = 512 * 1024
+
+        /** Hops allowed before a redirect chain is called broken. */
+        const val MAX_REDIRECTS = 5
 
         /** Longest edge of a rasterised vector icon; the widget draws at 96 px. */
         const val ICON_SIZE_PX = 192

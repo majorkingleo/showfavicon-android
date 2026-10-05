@@ -33,8 +33,10 @@ the cause was not the icon format at all: a configured site URL has no path
 (`https://host`), so `URI.resolve` glued the relative href onto the authority —
 `favicon.php?ts=…` became `https://hostfavicon.php`, an `UnknownHostException`.
 GitHub's page uses absolute hrefs, which is exactly why the bug stayed hidden.
-After the fix the same site needed the second, genuinely new piece: its favicon is
-an SVG. Both are described under "Decoding the icon bytes".
+Two more of the same kind followed: a redirect that changes the protocol is not
+followed by `HttpURLConnection` at all, and a 32 bit ICO whose alpha channel is
+empty has to be made opaque before its AND mask can mean anything. All of it is
+measured and fixed under "Decoding the icon bytes".
 
 - [x] **Milestone 0 — toolchain.** `scripts/install-android-toolchain.sh`, with
       the SDK package names verified against Google's repository XML.
@@ -196,32 +198,54 @@ it stayed hidden. Fixed by rooting the base before resolving
 
     candidates for https://serverhealthcheck.borger.co.at:
       [/favicon.php?ts=…, /favicon.ico]
-    candidate …/favicon.php?ts=… -> 252 bytes, svg=true
+    candidate …/favicon.php?ts=… -> 252 bytes, svg
     candidate …/favicon.php?ts=… -> icon 6255        # 192×192 PNG in the cache
 
-**Then the format.** `BitmapFactory` decides what can be displayed, and it covers
-raster formats only (PNG, JPEG, WebP, GIF, BMP). That leaves two gaps:
+**The hop, not the icon.** `HttpURLConnection` refuses a redirect that changes the
+protocol, and sites do exactly that. `https://www.slackware.com/favicon.ico`
+answers 301 to `http://…`, and a page the user typed as `http://host` answers 301 to
+https. Both used to end in "no icon", with the first response logged as a bare
+`HTTP 301`. The fetcher now follows up to five hops by hand and resolves each
+`Location` with the same helper as an icon href:
 
-- **SVG** — the only icon the site above offers is served as `image/svg+xml`.
+    http://www.postgresql.org -> HTTP 301 to https://www.postgresql.org/
+    http://www.postgresql.org/favicon.ico -> HTTP 301 to https://…/favicon.ico
+    candidate http://www.postgresql.org/favicon.ico -> icon 1500
+
+**Then the format.** `BitmapFactory` decides what can be displayed, and it covers
+raster formats only (PNG, JPEG, WebP, GIF, BMP). Two gaps were left:
+
+- **SVG** — the site above offers nothing but an `image/svg+xml` icon.
 - **ICO** — `BitmapFactory` cannot decode `.ico` at all, so a site that offers only
   `/favicon.ico` fails the same way, however reachable it is.
 
-Work order, decided after the measurement above:
+Both are closed. `SvgRasterizer` renders vectors through AndroidSVG onto a
+192×192 canvas, and `IcoDecoder` reads the container — the largest entry, an
+embedded PNG passed straight through or a DIB turned into a bitmap — so the store
+stays a plain PNG store and nothing downstream knows about either format.
 
-1. **B — render SVG. Done.** `SvgRasterizer` sniffs the bytes, renders through
-   `AndroidSVG` onto a transparent 192×192 canvas and hands PNG bytes to the
-   unchanged store, so the widget path does not change. A library rather than a hand
-   written subset renderer: gradients, transforms and strokes keep working for a few
-   lines of integration, and a subset renderer would silently degrade to the
-   placeholder.
-2. **C — unpack ICO. Open.** Parse the container (`00 00 01 00` plus 16 byte
-   directory entries), take the largest entry, pass an embedded PNG through
-   unchanged, build a `Bitmap` from a DIB entry (BITMAPINFOHEADER plus the AND mask
-   for transparency), reject the rest.
+What was verified, and how:
 
-Still open, smaller: relative hrefs are resolved against the *requested* URL. After
-a redirect they belong to the *final* URL (`HttpURLConnection.url`), otherwise the
-icon path points into the wrong directory.
+| Case | Evidence | Result |
+| --- | --- | --- |
+| SVG only | `serverhealthcheck.borger.co.at` | 252 bytes in, 6255 byte 192×192 PNG out |
+| ICO, 32 bit with real alpha | `www.debian.org`, 4 entries, picks 32×32 | `#c00040` swirl on a transparent background |
+| ICO, 8 bit palette plus mask | `www.postgresql.org`, 3 entries, picks 48×48 | Postgres blue `srgba(63,95,159,1)`, transparent corner |
+| ICO with an embedded PNG | `www.netbsd.org` | 2887 of 2909 bytes, passed through |
+| Directory field inconsistent | `www.slackware.com` says 0 bit in the directory, the DIB header is valid | decoded from the DIB header |
+| 1, 4 and 24 bit, padded rows | crafted files, local server | alternating red/blue and a transparent bottom row, pixel by pixel |
+| 32 bit with an empty alpha channel | crafted file, transparency in the AND mask | invisible before the fix, correct pattern after it |
+| Compressed DIB, entry past the end | crafted files | rejected, site marked failed, worker carries on, no crash |
+
+A decoded icon has to be looked at: pulling it and probing pixels with
+`magick … "%[pixel:p{x,y}]"` is what separates "decoded" from "placeholder". The
+crafted files come from a generator plus a local `python3 -m http.server` that the
+emulator reaches as `10.0.2.2`; the recipe is in the build skill.
+
+Still open, smaller: relative hrefs are resolved against the *requested* URL, not
+the *final* one. A page that redirects into a subdirectory therefore resolves its
+relative icon href into the wrong directory. Both live in `/` for the sites tested
+here, which is why it has not bitten yet.
 
 ## Milestones
 

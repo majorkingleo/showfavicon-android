@@ -1,6 +1,7 @@
 package com.martin.showfavicon
 
 import androidx.core.net.toUri
+import java.net.URI
 
 /**
  * URL helpers shared by the settings screen and the fetch worker.
@@ -30,6 +31,34 @@ object Urls {
 
     /** What the settings list shows: the host without its `www.` prefix. */
     fun displayName(url: String): String = host(url).removePrefix("www.")
+
+    /**
+     * Resolves [reference] — an icon href or a redirect target — against [base],
+     * or null when it cannot be parsed.
+     *
+     * Java's own resolution cannot be used unchanged: a base with no path of its
+     * own (`https://host`) makes `URI.resolve` glue the reference onto the
+     * authority, so `favicon.php` turned into `https://hostfavicon.php`. Rooting
+     * the base first fixes that and leaves a base that does have a path — and with
+     * it the parent directory semantics — untouched.
+     */
+    fun resolve(base: String, reference: String): String? = runCatching {
+        if (reference.startsWith(HTTP) || reference.startsWith(HTTPS)) {
+            reference
+        } else {
+            val uri = URI(base)
+            val rooted = URI(
+                uri.scheme,
+                uri.userInfo,
+                uri.host,
+                uri.port,
+                uri.path.orEmpty().ifEmpty { "/" },
+                uri.query,
+                uri.fragment,
+            )
+            rooted.resolve(reference).toString()
+        }
+    }.getOrNull()
 
     private const val HTTP = "http://"
     private const val HTTPS = "https://"

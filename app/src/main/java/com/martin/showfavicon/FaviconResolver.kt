@@ -44,7 +44,7 @@ object FaviconResolver {
         val vector = type.contains("svg") ||
             href.substringBefore('?').endsWith(".svg", ignoreCase = true)
 
-        val absolute = resolve(baseUrl, href) ?: return null
+        val absolute = Urls.resolve(baseUrl, href) ?: return null
         return rank(rel, vector) to absolute
     }
 
@@ -64,27 +64,5 @@ object FaviconResolver {
         val uri = URI(url)
         val host = uri.host ?: return null
         URI(uri.scheme, null, host, uri.port, null, null, null).toString()
-    }.getOrNull()
-
-    private fun resolve(baseUrl: String, href: String): String? = runCatching {
-        if (href.startsWith("http://") || href.startsWith("https://")) {
-            href
-        } else {
-            val base = URI(baseUrl)
-            // A site URL like "https://host" has an empty path, and URI.resolve
-            // then puts the reference into the authority:
-            // "favicon.php" became "https://hostfavicon.php", which does not
-            // resolve. Root the base before resolving anything relative.
-            val rooted = URI(
-                base.scheme,
-                base.userInfo,
-                base.host,
-                base.port,
-                base.path.orEmpty().ifEmpty { "/" },
-                base.query,
-                base.fragment,
-            )
-            rooted.resolve(href).toString()
-        }
     }.getOrNull()
 }
