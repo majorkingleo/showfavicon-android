@@ -243,10 +243,39 @@ A decoded icon has to be looked at: pulling it and probing pixels with
 crafted files come from a generator plus a local `python3 -m http.server` that the
 emulator reaches as `10.0.2.2`; the recipe is in the build skill.
 
-Still open, smaller: relative hrefs are resolved against the *requested* URL, not
-the *final* one. A page that redirects into a subdirectory therefore resolves its
-relative icon href into the wrong directory. Both live in `/` for the sites tested
-here, which is why it has not bitten yet.
+Relative icon hrefs are resolved against the URL that finally answered, not against
+the one that was requested. The local instance shows why that is more than a
+detail: the page is entered as `/serverhealthcheck/www`, which answers 301 to
+`/www/` and then 302 to `login.php`, and its `<link rel="icon" href="favicon.php">`
+exists only inside `/www/`. Resolved against the requested URL the candidate was
+`/serverhealthcheck/favicon.php` — 404, while the page itself answered fine. The
+icon stayed gray, and the network got blamed for it. Measured after the fix:
+
+    page …/www -> redirected to …/www/login.php
+    candidates for …/www/login.php: […/www/favicon.php, /favicon.ico]
+    …/www/favicon.php -> 252 bytes, svg -> icon 6240
+
+## Reacting to the network
+
+A site that cannot be reached is what grays an icon out, and the reason is usually
+the network the phone is on: a Wi-Fi that was just joined, or an address that only
+exists inside the LAN. Three things make the icon come back on its own:
+
+- The work requires a network (`NetworkType.CONNECTED`), so a fetch that cannot
+  work is not spent.
+- A run that leaves a site failing returns `Result.retry()`, with a linear backoff
+  starting at 30 s and a cap of six attempts per run. WorkManager holds that retry
+  back until the network is there again, which covers a device that had none at all.
+- `ShowFaviconApp` registers a default network callback. A constraint cannot see a
+  change from one network to another, and that is exactly the case here: when the
+  device switches networks, one refresh is queued immediately.
+
+Measured on the emulator: airplane mode off → `default network became available`,
+and a fetch ~100 ms later. A dead port produced `Worker result RETRY` with the next
+attempt 30 s out. The periodic work is enqueued with
+`ExistingPeriodicWorkPolicy.UPDATE` rather than `KEEP` — with `KEEP`, an install
+that already had the work would keep the constraints of the older version, which is
+the kind of change nobody notices for a week.
 
 ## Milestones
 

@@ -21,19 +21,28 @@ class FaviconFetcher {
     /** Icon bytes for [siteUrl], or null when nothing usable could be fetched. */
     fun fetch(siteUrl: String): ByteArray? {
         val page = get(siteUrl, MAX_HTML_BYTES, ACCEPT_HTML)
-        Log.d(TAG, "page $siteUrl -> ${page?.size ?: "failed"}")
-        val html = page?.toString(Charsets.UTF_8)
+        Log.d(TAG, "page $siteUrl -> ${page?.bytes?.size ?: "failed"}")
+        if (page != null && page.url != siteUrl) {
+            Log.d(TAG, "page $siteUrl -> redirected to ${page.url}")
+        }
+
+        // Relative icon hrefs belong to the URL that actually answered, not to the
+        // one that was asked: a site that redirects /www to /www/ keeps its
+        // favicon.php in /www/, and resolving against the requested URL looked one
+        // directory too high (404 while the page itself answered).
+        val base = page?.url ?: siteUrl
+        val html = page?.bytes?.toString(Charsets.UTF_8)
 
         val candidates = if (html == null) {
             // The page itself failed, but the icon may still be reachable.
-            listOf("${Urls.normalize(siteUrl)}/favicon.ico")
+            listOfNotNull(Urls.origin(base)?.let { "$it/favicon.ico" })
         } else {
-            FaviconResolver.candidates(html, siteUrl)
+            FaviconResolver.candidates(html, base)
         }
-        Log.d(TAG, "candidates for $siteUrl: $candidates")
+        Log.d(TAG, "candidates for $base: $candidates")
 
         for (candidate in candidates) {
-            val bytes = get(candidate, MAX_ICON_BYTES, ACCEPT_ANY) ?: continue
+            val bytes = get(candidate, MAX_ICON_BYTES, ACCEPT_ANY)?.bytes ?: continue
             val kind = when {
                 SvgRasterizer.looksLikeSvg(bytes) -> "svg"
                 IcoDecoder.looksLikeIco(bytes) -> "ico"
@@ -57,15 +66,18 @@ class FaviconFetcher {
     /**
      * Fetches [url] and follows up to [MAX_REDIRECTS] redirects by hand.
      *
+     * Returns the body with the URL that produced it, because a redirected page
+     * resolves its relative links against the final URL, not the requested one.
+     *
      * `HttpURLConnection` refuses a hop that changes the protocol, and sites do
      * exactly that: an icon requested over https may answer 301 to http, and a page
      * typed as http answers 301 to https.
      */
-    private fun get(url: String, maxBytes: Int, accept: String): ByteArray? {
+    private fun get(url: String, maxBytes: Int, accept: String): Fetched? {
         var target = url
         repeat(MAX_REDIRECTS + 1) {
             val answer = request(target, maxBytes, accept) ?: return null
-            if (answer.bytes != null) return answer.bytes
+            answer.bytes?.let { return Fetched(it, target) }
 
             val location = answer.location ?: return null
             target = Urls.resolve(target, location) ?: return null
@@ -116,6 +128,9 @@ class FaviconFetcher {
 
     /** Body or redirect target of a single request, never both. */
     private class Answer(val bytes: ByteArray?, val location: String?)
+
+    /** A body together with the URL that finally answered with it. */
+    private class Fetched(val bytes: ByteArray, val url: String)
 
     private companion object {
         const val TAG = "ShowFaviconFetch"

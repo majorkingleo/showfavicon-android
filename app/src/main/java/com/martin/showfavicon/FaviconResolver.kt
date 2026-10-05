@@ -1,7 +1,5 @@
 package com.martin.showfavicon
 
-import java.net.URI
-
 /**
  * Finds favicon candidates in a page's `<head>`.
  *
@@ -28,7 +26,7 @@ object FaviconResolver {
             .toList()
 
         val ranked = declared.sortedBy { it.first }.map { it.second }.distinct()
-        val fallback = origin(baseUrl)?.let { "$it/favicon.ico" }
+        val fallback = Urls.origin(baseUrl)?.let { "$it/favicon.ico" }
         return (ranked + listOfNotNull(fallback)).distinct()
     }
 
@@ -58,11 +56,4 @@ object FaviconResolver {
         vector -> 2
         else -> 1
     }
-
-    /** `scheme://host[:port]` of a URL, without path or query. */
-    private fun origin(url: String): String? = runCatching {
-        val uri = URI(url)
-        val host = uri.host ?: return null
-        URI(uri.scheme, null, host, uri.port, null, null, null).toString()
-    }.getOrNull()
 }

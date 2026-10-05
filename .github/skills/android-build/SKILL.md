@@ -307,6 +307,18 @@ Two lessons that came out of exactly this workflow:
   href glued onto the host: `https://hostfavicon.php` → `UnknownHostException`),
   and the icon *format* was only the second problem. See "Decoding the icon bytes"
   in `doc/plan-android.md`.
+- A redirect plus a relative icon href is worth reproducing locally, because the
+  page can answer fine while both icon candidates 404 — and then the network gets
+  blamed. A throwaway server is enough: `/site` answers 301 to `/site/`, the page
+  declares `href="favicon.php"`, and only `/site/favicon.php` exists.
+- To exercise a network change, toggle the emulator's radio and watch both tags:
+
+  ```fish
+  adb -s emulator-5554 shell cmd connectivity airplane-mode enable
+  adb -s emulator-5554 shell cmd connectivity airplane-mode disable
+  adb -s emulator-5554 logcat -d -s ShowFaviconNet ShowFaviconFetch | tail -14
+  ```
+
 - `installDebug` **removes a placed widget** from the home screen
   (`AppWidgetServiceImpl: removeWidgetLocked`). Announce any visual check of the
   widget together with re-placing it, or expect "the widget is gone".

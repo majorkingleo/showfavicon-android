@@ -33,6 +33,17 @@ object Urls {
     fun displayName(url: String): String = host(url).removePrefix("www.")
 
     /**
+     * `scheme://host[:port]` of a URL, without path or query. This is where a
+     * browser looks for the icon of a page that declares none, so it is the
+     * fallback candidate — not the page's own directory.
+     */
+    fun origin(url: String): String? = runCatching {
+        val uri = URI(url)
+        val host = uri.host ?: return null
+        URI(uri.scheme, null, host, uri.port, null, null, null).toString()
+    }.getOrNull()
+
+    /**
      * Resolves [reference] — an icon href or a redirect target — against [base],
      * or null when it cannot be parsed.
      *
