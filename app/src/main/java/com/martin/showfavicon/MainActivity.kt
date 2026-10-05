@@ -1,7 +1,10 @@
 package com.martin.showfavicon
 
+import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.InputMethodManager
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
@@ -48,6 +51,10 @@ class MainActivity : AppCompatActivity() {
             addCurrentInput()
             true
         }
+        // A focusable EditText swallows its OnClickListener in the focus change,
+        // and after the keyboard was closed the IME can still believe it is
+        // shown, so no new show request is made. Hence the touch listener below.
+        requestKeyboardOnTap(urlInput)
 
         // Idempotent, and the only place that guarantees the hourly work exists
         // even when the user never places the widget.
@@ -69,13 +76,39 @@ class MainActivity : AppCompatActivity() {
             val bars = insets.getInsets(
                 WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
             )
+            // The keyboard overlays the window as well; whichever inset is taller wins.
+            val ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
             view.updatePadding(
                 top = basePaddingTop + bars.top,
-                bottom = basePaddingBottom + bars.bottom,
+                bottom = basePaddingBottom + maxOf(bars.bottom, ime),
             )
             // Not consumed: children may still want to know about the insets.
             insets
         }
+    }
+
+    /**
+     * Raises the keyboard whenever [field] is tapped, not only when it gains
+     * focus: after the keyboard was closed the IME can still believe it is
+     * shown, and then the framework sends no new show request.
+     */
+    @SuppressLint("ClickableViewAccessibility") // performClick() is called on ACTION_UP
+    private fun requestKeyboardOnTap(field: EditText) {
+        field.setOnTouchListener { view, event ->
+            if (event.actionMasked == MotionEvent.ACTION_UP) {
+                showKeyboard(view)
+                view.performClick()
+            }
+            // Not consumed, so the cursor still lands where the tap was.
+            false
+        }
+    }
+
+    /** Raises the soft keyboard for [view], whether or not the IME thinks it is up. */
+    private fun showKeyboard(view: View) {
+        view.requestFocus()
+        val manager = getSystemService(InputMethodManager::class.java) ?: return
+        manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
     }
 
     private fun addCurrentInput() {

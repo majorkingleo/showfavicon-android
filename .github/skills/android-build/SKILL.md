@@ -187,6 +187,32 @@ undo a correct folder layout because of it — here the bare `mipmap-anydpi`
 folder was valid all along, and lint's `ObsoleteSdkInt` asks for exactly that
 name once `minSdk` is 26.
 
+### 6. The emulator is not a reliable keyboard test target
+
+Tapping the URL field in the settings screen did not always raise the soft
+keyboard. Measured on this host, with the same APK:
+
+| `-gpu` | result |
+| --- | --- |
+| host default (gfxstream) | emulator crashes while booting (`error null ctx`) |
+| `swiftshader_indirect` | boots, but the IME window reports `isVisible=true`, `HAS_DRAWN` and never draws a keyboard |
+| `angle_indirect` | boots, and rendered the keyboard right after boot (A/B verified), but not minutes later in the same session |
+
+`dumpsys input_method` claims `mImeWindowVis=3` in every one of those cases, so
+it cannot be trusted, and `uiautomator dump` never contains the IME window —
+`package="com.google.android.inputmethod.latin"` simply does not appear in it.
+The probe that does work is the screenshot size as an A/B: flat app screen ≈
+50–70 KB, screen with keyboard ≈ 0.8–1.4 MB (`adb exec-out screencap -p`).
+
+Consequence: verify keyboard behaviour on a device, not here. The app side is
+hardened anyway, because both halves of the trap are real: an `OnClickListener`
+on a focusable `EditText` is swallowed by the focus change (use `setOnTouchListener`
+on `ACTION_UP`), and an IME that believes it is still shown issues no new show
+request (`InputMethodManager.showSoftInput`). Note that `input text` injects key
+events through whatever IME is armed, so it can silently produce text the app
+never received — seeding the `SharedPreferences` file through `run-as` is the
+dependable way to put data into the app.
+
 ## What green looks like
 
 ```

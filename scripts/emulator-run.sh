@@ -23,11 +23,12 @@ APP_ID="com.martin.showfavicon"
 ACTIVITY="${APP_ID}/.MainActivity"
 BOOT_TIMEOUT=300
 
-# Software rendering on purpose: the host GL path (gfxstream) fails on this
-# machine with "error null ctx" and took the emulator down mid-install once.
 # Cold boot only, so a snapshot left behind by an abrupt shutdown cannot break
-# the next start.
-EMULATOR_FLAGS=(-no-boot-anim -no-snapshot -gpu swiftshader_indirect)
+# the next start. GPU: the host default (gfxstream) crashes this emulator during
+# boot, and plain `swiftshader_indirect` boots but never renders the IME window
+# (isVisible=true, HAS_DRAWN, no keyboard on screen), so ANGLE is the middle
+# ground.
+EMULATOR_FLAGS=(-no-boot-anim -no-snapshot -gpu angle_indirect)
 
 # AGP 9.4 does not accept JDK 25, and this machine has it too.
 JAVA_HOME_ANDROID="/usr/lib/jvm/java-21-openjdk"
