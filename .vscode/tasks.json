@@ -40,6 +40,16 @@
 				"--stop"
 			],
 			"problemMatcher": []
+		},
+		{
+			"label": "Android: install on device",
+			"detail": "installDebug on the attached phone (never an emulator) and start the app",
+			"type": "shell",
+			"command": "./scripts/install-on-device.sh",
+			"args": [
+				"--launch"
+			],
+			"problemMatcher": []
 		}
 	]
 }

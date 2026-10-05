@@ -60,7 +60,8 @@ tail -60 /tmp/build.log
 In VS Code the task **Android: build debug APK** (`.vscode/tasks.json`, on
 Ctrl+Shift+B) runs the same command and pins the same `JAVA_HOME`. The tasks
 **Android: run on emulator** and **Android: stop emulator** call
-`scripts/emulator-run.sh`.
+`scripts/emulator-run.sh`, and **Android: install on device** calls
+`scripts/install-on-device.sh`.
 
 ### The emulator
 
@@ -78,6 +79,24 @@ has to reach zero.
 Screenshots of the *device*, unaffected by window scaling or the host desktop,
 come from `adb exec-out screencap -p > /tmp/emu.png`. `adb shell wm size` reports
 the pixel dimensions that `adb shell input tap X Y` expects.
+
+### A real device
+
+```fish
+./scripts/install-on-device.sh            # the only phone attached
+./scripts/install-on-device.sh --launch   # and start the app
+./scripts/install-on-device.sh --serial 52d081d6
+```
+
+What Gradle's `installDebug` runs, `adb install -r`, keeps the app's data: the site
+list and the cached icons survive an install. A placed widget does **not** — every
+install removes it from the home screen, so it has to be placed again afterwards.
+Say that instead of wondering.
+
+The script ignores `emulator-*` ids and refuses to guess when several devices are
+attached, because `adb` and Gradle refuse too (trap 8). A phone in state
+`unauthorized` counts as "no device": unlock it, confirm the USB prompt, and
+`adb devices` says `device`.
 
 ## Where things land
 
