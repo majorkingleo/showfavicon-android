@@ -22,16 +22,22 @@ import androidx.recyclerview.widget.RecyclerView
 /**
  * The settings screen: the list of monitored sites.
  *
- * No drag and drop by design — adding from a text field and removing from the
- * list covers the use case. The same screen is meant to become the widget's
- * configuration activity once per instance configuration is implemented.
+ * No drag and drop by design. Adding goes through the text field, tapping a row
+ * loads that site back into the field for a correction, and the row's button
+ * removes it. Every change is saved as it happens, so leaving the screen needs no
+ * confirmation. The widget always shows the first four sites, which is why this is
+ * not a widget configuration activity.
  */
 class MainActivity : AppCompatActivity() {
 
     private lateinit var sites: SiteStore
     private lateinit var adapter: SiteAdapter
     private lateinit var urlInput: EditText
+    private lateinit var addButton: Button
     private lateinit var emptyHint: TextView
+
+    /** URL of the site the field is editing, or null while a new site is typed. */
+    private var editing: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -48,18 +54,22 @@ class MainActivity : AppCompatActivity() {
         urlInput = findViewById(R.id.url_input)
         emptyHint = findViewById(R.id.empty_view)
 
-        adapter = SiteAdapter { url -> remove(url) }
+        adapter = SiteAdapter(
+            onClick = { url -> editOrToggle(url) },
+            onRemove = { url -> remove(url) },
+        )
         findViewById<RecyclerView>(R.id.site_list).apply {
             layoutManager = LinearLayoutManager(this@MainActivity)
             adapter = this@MainActivity.adapter
         }
 
-        findViewById<Button>(R.id.add_button).setOnClickListener { addCurrentInput() }
+        addButton = findViewById(R.id.add_button)
+        addButton.setOnClickListener { submitInput() }
         findViewById<Button>(R.id.refresh_button).setOnClickListener { fetchNow() }
         // The keyboard's own Done key commits the field and then gets out of the
         // way; without this the keyboard stayed up with nothing to close it.
         urlInput.setOnEditorActionListener { _, _, _ ->
-            addCurrentInput()
+            submitInput()
             hideKeyboard(urlInput)
             true
         }
@@ -153,12 +163,31 @@ class MainActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun addCurrentInput() {
-        when (sites.add(urlInput.text.toString())) {
+    /**
+     * Adds a new site, or saves the one the field is editing. One field and one
+     * button, because a site is a URL and nothing else.
+     */
+    private fun submitInput() {
+        val target = editing
+        val result = if (target == null) {
+            sites.add(urlInput.text.toString())
+        } else {
+            sites.update(target, urlInput.text.toString())
+        }
+
+        when (result) {
             SiteStore.AddResult.ADDED -> {
-                urlInput.setText("")
-                urlInput.error = null
+                clearInput()
                 showSites()
+                fetchNow()
+            }
+
+            SiteStore.AddResult.UPDATED -> {
+                leaveEditMode()
+                showSites()
+                // The old host may be unconfigured now, the new one needs an icon.
+                FaviconStore(this).prune(sites.sites().map { Urls.host(it) })
+                FaviconWidgetProvider.refreshAll(this)
                 fetchNow()
             }
 
@@ -173,7 +202,38 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Loads [site] into the field for a correction, or leaves that mode again. */
+    private fun editOrToggle(site: String) {
+        if (editing == site) {
+            leaveEditMode()
+            return
+        }
+
+        editing = site
+        urlInput.setText(site)
+        urlInput.setSelection(site.length)
+        urlInput.error = null
+        addButton.text = getString(R.string.save_site)
+        adapter.setEditing(site)
+        showKeyboard(urlInput)
+    }
+
+    /** Gives the field back to adding new sites. */
+    private fun leaveEditMode() {
+        editing = null
+        clearInput()
+        addButton.text = getString(R.string.add_site)
+        adapter.setEditing(null)
+    }
+
+    private fun clearInput() {
+        urlInput.setText("")
+        urlInput.error = null
+    }
+
     private fun remove(url: String) {
+        if (editing == url) leaveEditMode()
+
         sites.remove(url)
         FaviconStore(this).prune(sites.sites().map { Urls.host(it) })
         showSites()

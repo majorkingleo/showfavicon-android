@@ -163,13 +163,14 @@ cell is a legal widget size for the one-icon case.
 
 ## Configuration
 
-- A plain settings **Activity**: a list of URLs with add / edit / remove and
-  validation, persisted in `SharedPreferences` or DataStore. **No drag-and-drop
-  required.**
-- Reached twice: as the app's main screen, and as the widget's
-  `android:configure` activity when the widget is placed. Reuse the same screen
-  for both — the configure path additionally returns the widget id to
-  `AppWidgetManager`.
+- A plain settings **Activity**: a list of URLs with add, edit and remove, plus
+  validation, persisted in `SharedPreferences`. **No drag-and-drop required.**
+  Editing reuses the single URL field: tapping a row loads that site, the button
+  becomes *Save* and the row stays highlighted, so a typo costs one tap instead of
+  removing the site and adding it again at the end of the list. Tapping the same
+  row leaves the mode again.
+- **Not** a widget configuration activity: the widget always shows the first four
+  sites, so `android:configure` was dropped by decision (see milestone 4).
 - Optional convenience: a "share from browser → ShowFavicon" intent to append a
   URL without opening the app.
 - Permissions: `INTERNET`. Only the optional notification path adds
