@@ -120,7 +120,8 @@ class MainActivity : AppCompatActivity() {
     private fun showKeyboard(view: View) {
         view.requestFocus()
         val manager = getSystemService(InputMethodManager::class.java) ?: return
-        manager.showSoftInput(view, InputMethodManager.SHOW_IMPLICIT)
+        // Flags are 0: SHOW_IMPLICIT is deprecated and had no effect anyway.
+        manager.showSoftInput(view, 0)
     }
 
     /** Takes the keyboard down again. */
